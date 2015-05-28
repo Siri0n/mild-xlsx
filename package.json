@@ -1,6 +1,6 @@
 {
   "name": "mild-xlsx",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "\"Simple xlsx-processing library focused on not breaking anything.\"",
   "main": "workbook.js",
   "scripts": {
