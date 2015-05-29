@@ -148,7 +148,6 @@ function XLSXWrapper(filename){
 			if(_.isUndefined(dest)){
 				dest = self.$relative(source.$parent().$path()) + "/" + source.$parent().$uniqueLike(source.$name());
 			}
-			console.log("clone " + src + " " + dest);
 			return self.$create(dest, source.data());
 		}
 		this.$unique = function(prefix, suffix){
@@ -215,7 +214,6 @@ function XLSXWrapper(filename){
 	}
 
 	function XMLWrapper(props){
-		console.log("new xmlwrapper");
 		var self = this;
 		var zip = props.zip;
 		var path = props.path;
@@ -248,7 +246,6 @@ function XLSXWrapper(filename){
 				if(xml){
 					return xml;
 				}else{
-					console.log(props.defaultData);
 					return xml = parser.parseFromString(zip.file(path) ? zip.file(path).asText() : props.defaultData);
 				}
 			}
@@ -770,5 +767,8 @@ function Range(xlsx, sheet, bounds){
 
 module.exports = {
 	Workbook: Workbook,
-	xlsx: XLSXWrapper
+	util: {
+		addr: addr,
+		index: index
+	}
 }

@@ -2,10 +2,7 @@
   "name": "mild-xlsx",
   "version": "0.0.5",
   "description": "\"Simple xlsx-processing library focused on not breaking anything.\"",
-  "main": "workbook.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
+  "main": "mild.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/Siri0n/mild-xlsx.git"
