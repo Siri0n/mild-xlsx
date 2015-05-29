@@ -77,6 +77,12 @@ function XLSXWrapper(filename){
 		this.$path = function(){
 			return props.path;
 		}
+		this.$files = function(){
+			console.log("files!");
+			return _.filter(content, function(val){
+				return val.$isFile;
+			});
+		}
 		this.$relative = function(path){
 			var folders = props.path ? props.path.split("/") : [];
 			var folders2 = path.split("/");
@@ -219,6 +225,10 @@ function XLSXWrapper(filename){
 		var path = props.path;
 		var name = path.split("/").pop();
 		var xml = props.data && parser.parseFromString(props.data);
+		var modified = false;
+
+		this.$isFolder = false;
+		this.$isFile = true;
 
 		this.delete = function(){
 			zip.remove(path);
@@ -228,6 +238,9 @@ function XLSXWrapper(filename){
 		}
 		this.data = function(){
 			return serializer.serializeToString(self.xml);
+		}
+		this.modified = function(){
+			return modified;
 		}
 		this.$save = function(){
 			xml && zip.file(path, serializer.serializeToString(xml));
@@ -243,6 +256,7 @@ function XLSXWrapper(filename){
 		}
 		Object.defineProperty(self, "xml", {
 			get: function(){
+				modified = true;
 				if(xml){
 					return xml;
 				}else{
@@ -280,6 +294,7 @@ function XLSXWrapper(filename){
 }
 
 function Workbook(filename){
+	var self = this;
 	var xlsx = new XLSXWrapper(filename);
 	var wbRelsNode = xlsx.xl.workbook.rels.xml.onlyTag("Relationships");
 	var types = xlsx["[Content_Types]"].xml.onlyTag("Types");
@@ -329,8 +344,20 @@ function Workbook(filename){
 			return new Worksheet(xlsx, sheetXML, sheetRel.attr("Target"));
 		}
 	}
-	this.save = function(fname){
-		xlsx.$saveFile(fname);
+	this.save = function(fname, options){
+		options = _.defaults(options || {}, {
+			deleteCalcChain: true,
+			deleteFormulaValues: true
+		});
+		if(options.deleteCalcChain){
+			xlsx.xl.calcChain && xlsx.xl.calcChain.delete();
+		}
+		if(options.deleteFormulaValues){
+			self.sheets().forEach(function(name){
+				self.sheets(name).recalc();
+			})
+		}
+		xlsx.$saveFile(fname, options);
 	}
 	this.xlsx = xlsx; //debug only
 }
@@ -338,22 +365,47 @@ function Workbook(filename){
 function Worksheet(xlsx, sheet, path){
 	var self = this;
 
-	this.name = function(val){
+	function isValidName(name){
+		if(name.length > 31){
+			return false;
+		}
+		if(/[:\[\]\*\?\\\/]/.test(name)){
+			return false;
+		}
+		if(xlsx.xl.workbook.xml.byTag("sheet").find({name:name})){
+			return false;
+		}
+		return true;
+	}
+	this.name = function(name){
 		var relations = xlsx.xl.workbook.rels.xml
 			.byTag("Relationship");
 		var sheetId = relations.find({Target: path}).attr("Id");
 		var wbSheetNode = xlsx.xl.workbook.xml.byTag("sheet").find({"r:id": sheetId});
 
-		if(val){
-			wbSheetNode.attr("name", val);	
+		if(name){
+			if(!isValidName(name)){
+				throw new Error("Incorrect sheet name");
+			}
+			wbSheetNode.attr("name", name);	
 		}else{
 			return wbSheetNode.attr("name");
 		}
+	}
+	this.recalc = function(){
+		_.forEach(sheet.xml.byTag("c"), function(cell){
+			if(cell.onlyTag("f") && cell.onlyTag("v")){
+				cell.onlyTag("v").delete();
+			}
+		})
 	}
 	this.range = function(){
 		return new Range(xlsx, sheet, getBounds.call(null, arguments));
 	}
 	this.clone = function(name){
+		if(!isValidName(name)){
+			throw new Error("Incorrect sheet name");
+		}
 		var wbSheetRelList = xlsx.xl.workbook.rels.xml.onlyTag("Relationships");
 		var wbSheetRelNode = wbSheetRelList.childNodes.find({Target: path});
 		var cloneSheetRelNode = wbSheetRelNode.cloneNode();
