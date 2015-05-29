@@ -1,6 +1,0 @@
-var mx = require("./mild")
-var wb = new mild.Workbook("./stuff/test.xlsx")
-var wb = new mx.Workbook("./stuff/test.xlsx")
-wb.sheets()
-wb.sheets("Лист1")
-wb.sheets("Лист1").recalc()
