@@ -29,7 +29,7 @@ var _ = require("lodash");
 		this.parentNode.removeChild(this);
 	}
 	var nodeList = doc.childNodes;
-	nodeList.constructor.prototype.find = function(query){
+	nodeList.constructor.prototype.xfind = function(query){
 		return _.find(this, function(node){
 			return _.every(query, function(val, key){
 				return node.getAttribute(key) == val;
@@ -302,18 +302,18 @@ function Workbook(filename){
 	//creating SST if it isn't created before
 	xlsx.$create("xl/sharedStrings.xml", null, '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'+
 	'<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"/>');
-	var SSTRel = wbRelsNode.childNodes.find({Target: "sharedStrings.xml"});
+	var SSTRel = wbRelsNode.childNodes.xfind({Target: "sharedStrings.xml"});
 	if(!SSTRel){
 		SSTRel = xlsx.xl.workbook.rels.xml.createElement("Relationship");
 		SSTRel.attr("Target", "sharedStrings.xml");
 		SSTRel.attr("Type", "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings");
 		var i = 0;
-		while(wbRelsNode.childNodes.find({Id: "rId"+(++i)}));
+		while(wbRelsNode.childNodes.xfind({Id: "rId"+(++i)}));
 		var rId = "rId" + i;
 		SSTRel.attr("Id", rId);
 		wbRelsNode.appendChild(SSTRel);
 	}
-	var SSTOverride = types.byTag("Override").find({PartName:"/xl/sharedStrings.xml"});
+	var SSTOverride = types.byTag("Override").xfind({PartName:"/xl/sharedStrings.xml"});
 	if(!SSTOverride){
 		SSTOverride = xlsx["[Content_Types]"].xml.createElement("Override");
 		SSTOverride.attr("PartName", "/xl/sharedStrings.xml");
@@ -328,12 +328,12 @@ function Workbook(filename){
 				return node.attr("name");
 			});
 		}else{
-			var sheetNode = sheetsNode.childNodes.find({name: name});
+			var sheetNode = sheetsNode.childNodes.xfind({name: name});
 			if(!sheetNode){
 				return null;
 			}
 			var sheetRel = xlsx.xl.workbook.rels.xml
-				.byTag("Relationship").find({"Id": sheetNode.attr("r:id")});
+				.byTag("Relationship").xfind({"Id": sheetNode.attr("r:id")});
 			if(!sheetRel){
 				throw new Error("Invalid xlsx file");
 			}
@@ -372,7 +372,7 @@ function Worksheet(xlsx, sheet, path){
 		if(/[:\[\]\*\?\\\/]/.test(name)){
 			return false;
 		}
-		if(xlsx.xl.workbook.xml.byTag("sheet").find({name:name})){
+		if(xlsx.xl.workbook.xml.byTag("sheet").xfind({name:name})){
 			return false;
 		}
 		return true;
@@ -380,8 +380,8 @@ function Worksheet(xlsx, sheet, path){
 	this.name = function(name){
 		var relations = xlsx.xl.workbook.rels.xml
 			.byTag("Relationship");
-		var sheetId = relations.find({Target: path}).attr("Id");
-		var wbSheetNode = xlsx.xl.workbook.xml.byTag("sheet").find({"r:id": sheetId});
+		var sheetId = relations.xfind({Target: path}).attr("Id");
+		var wbSheetNode = xlsx.xl.workbook.xml.byTag("sheet").xfind({"r:id": sheetId});
 
 		if(name){
 			if(!isValidName(name)){
@@ -407,18 +407,18 @@ function Worksheet(xlsx, sheet, path){
 			throw new Error("Incorrect sheet name");
 		}
 		var wbSheetRelList = xlsx.xl.workbook.rels.xml.onlyTag("Relationships");
-		var wbSheetRelNode = wbSheetRelList.childNodes.find({Target: path});
+		var wbSheetRelNode = wbSheetRelList.childNodes.xfind({Target: path});
 		var cloneSheetRelNode = wbSheetRelNode.cloneNode();
 		
 		var i = 0;
-		while(wbSheetRelList.childNodes.find({Id: "rId"+(++i)}));
+		while(wbSheetRelList.childNodes.xfind({Id: "rId"+(++i)}));
 		var rId = "rId" + i;
 		cloneSheetRelNode.attr("Id", rId);
 		
 		var wbSheetList = xlsx.xl.workbook.xml.onlyTag("sheets");
 		var sheetId = 0;
-		while(wbSheetList.childNodes.find({sheetId: ++sheetId}));
-		var wbSheetNode = wbSheetList.childNodes.find({"r:id": wbSheetRelNode.attr("Id")});
+		while(wbSheetList.childNodes.xfind({sheetId: ++sheetId}));
+		var wbSheetNode = wbSheetList.childNodes.xfind({"r:id": wbSheetRelNode.attr("Id")});
 		
 		var cloneSheet = xlsx.$clone(sheet.$path());
 		cloneSheetRelNode.attr("Target", xlsx.xl.$relative(cloneSheet.$path()));
@@ -440,22 +440,22 @@ function Worksheet(xlsx, sheet, path){
 		_.forEach(sheet.rels.xml.byTag("Relationship"), function(rel){
 			var clonedFile = xlsx.xl.worksheets.$clone(rel.attr("Target"));
 			var newTarget = rel.attr("Target").replace(/\/[^/]+$/, "/") + clonedFile.$name();
-			cloneRels.xml.byTag("Relationship").find({Id: rel.attr("Id")}).attr("Target", newTarget);
+			cloneRels.xml.byTag("Relationship").xfind({Id: rel.attr("Id")}).attr("Target", newTarget);
 		});
 		return new Worksheet(xlsx, cloneSheet, xlsx.xl.$relative(cloneSheet.$path()));
 	}
 	this.delete = function(){
 		var wbSheetRel = xlsx.xl.workbook.rels.xml
-			.byTag("Relationship").find({Target: path});
+			.byTag("Relationship").xfind({Target: path});
 		var wbSheetsCount = xlsx.xl.workbook.xml.byTag("sheet").length;
 		if(wbSheetsCount == 1){
 			throw new Error("Attempted to delete last sheet");
 		}
-		var wbSheetNode = xlsx.xl.workbook.xml.byTag("sheet").find({"r:id": wbSheetRel.attr("Id")});
+		var wbSheetNode = xlsx.xl.workbook.xml.byTag("sheet").xfind({"r:id": wbSheetRel.attr("Id")});
 		_.forEach(sheet.rels.xml.byTag("Relationship"), function(rel){
 			xlsx.xl.worksheets.$get(rel.attr("Target")).delete();
 		})
-		xlsx["[Content_Types]"].xml.byTag("Override").find({PartName: "/" + sheet.$path()}).delete();
+		xlsx["[Content_Types]"].xml.byTag("Override").xfind({PartName: "/" + sheet.$path()}).delete();
 		sheet.rels.delete();
 		sheet.delete();
 		wbSheetNode.delete();
@@ -543,13 +543,13 @@ function Range(xlsx, sheet, bounds){
 		var rowNodes = sheet.xml.byTag("row");
 		var flag; //some ugly imperative iteration? yes, it is
 		for(var i = fbounds.top; i <= fbounds.bottom; i++){
-			var row = rowNodes.find({r:i});
+			var row = rowNodes.xfind({r:i});
 			if(!row){
 				continue;
 			}
 			var cellNodes = row.byTag("c");
 			for(var j = fbounds.left; j <= fbounds.right; j++){
-				var cell2 = cellNodes.find({r: addr(j, i)});
+				var cell2 = cellNodes.xfind({r: addr(j, i)});
 				if(!cell2){
 					continue;
 				}
@@ -580,13 +580,13 @@ function Range(xlsx, sheet, bounds){
 	function readIterator(f){
 		var rowNodes = sheet.xml.byTag("row");
 		return rowIndexes.map(function(r){
-			var row = rowNodes.find({r:r});
+			var row = rowNodes.xfind({r:r});
 			if(!row){
 				return columnIndexes.map(function(){return null});
 			}else{
 				var cellNodes = row.byTag("c");
 				return columnIndexes.map(function(c){
-					var cell = cellNodes.find({r: addr(c, r)});
+					var cell = cellNodes.xfind({r: addr(c, r)});
 					return f({
 						cell: cell,
 						row: row,
@@ -600,7 +600,7 @@ function Range(xlsx, sheet, bounds){
 	function writeIterator(data, f){
 		rowIndexes.forEach(function(r,x){
 			var rowNodes = sheet.xml.byTag("row");
-			var row = rowNodes.find({r:r});
+			var row = rowNodes.xfind({r:r});
 			if(!row){
 				row = sheet.xml.createElement("row");
 				row.attr("r", r);
@@ -613,7 +613,7 @@ function Range(xlsx, sheet, bounds){
 			}
 			columnIndexes.forEach(function(c, y){
 				var val = ((data || [])[x] || [])[y];
-				var cell = row.childNodes.find({r: addr(c, r)});
+				var cell = row.childNodes.xfind({r: addr(c, r)});
 				f({
 					cell: cell,
 					row: row,
@@ -667,7 +667,7 @@ function Range(xlsx, sheet, bounds){
 				var flag = true;
 				var si = -1;
 				var sheetData = sheet.xml.onlyTag("sheetData");
-				while(sheetData.byTag("f").find({si:++si}));
+				while(sheetData.byTag("f").xfind({si:++si}));
 				writeIterator(null, function(params){
 					var cell = params.cell;
 					var row = params.row;
